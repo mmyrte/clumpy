@@ -10,7 +10,7 @@ and R implementations.
 
 1. ✅ **Set up Python environment** — `uv` with local packages `hyperclip`, `ekde`, `clumpy`
 2. ✅ **Dead-code removal** — use basedpyright to identify and remove unreachable code
-3. ⬜ **Python allocation script** — standalone script with synthetic data exercising `GaussianPatcher` / allocation pipeline
+3. ✅ **Python allocation script** — standalone script with synthetic data exercising `GaussianPatcher` / allocation pipeline
 4. ⬜ **Shell wrapper** — script that runs both the Python allocator and the R function, compares outputs
 5. ⬜ **Rcpp module** — R script with Rcpp module implementing the core allocation possibly making use of `SpatRaster` from `terra` for raster handling.
 
@@ -116,21 +116,68 @@ These are broken methods that would crash at runtime but are not called by any c
 
 ---
 
-## Step 3: Python Allocation Script — ⬜ TODO
+## Step 3: Python Allocation Script — ✅ DONE
 
-Plan:
-- Identify the minimal pipeline to run an allocation:
-  calibration → transition probability estimation → density estimation → allocation.
-- Write a self-contained script that generates synthetic raster data (land-use map +
-  explanatory variables) and runs `GaussianPatcher`-based allocation.
-- Key entry points to investigate:
-  - `clumpy.case._case.Case` — the top-level orchestrator
-  - `clumpy.case._engine.Engine` — another top-level runner
-  - `clumpy.allocation._allocator.Allocator` — the allocation dispatcher
-  - `clumpy.allocation._unbiased.Unbiased` — the unbiased allocation method
-  - `clumpy.allocation._gart.generalized_allocation_rejection_test` — GART sampling
-  - `clumpy.patch._patcher.Patcher.allocate` — the core patch-growing loop
-  - `clumpy.patch._gaussian_patcher.GaussianPatcher` — Gaussian patch size sampling
+### What was done
+
+Created `scripts/run_allocation.py` — a standalone script that exercises the full
+clumpy allocation pipeline with synthetic data, bypassing the broken `Calibrator`/`Case`
+orchestration layer and assembling the pipeline components manually.
+
+The script:
+
+1. **Generates synthetic data** — a 20×20 land-use grid (forest/urban/water) with two
+   explanatory variables (distance-to-urban, random slope).
+2. **Fits a Bayes TPE** using `ekde.KDE` on calibration data (observed forest→urban
+   transitions).
+3. **Computes per-pixel transition probabilities** P(v|u,Z) via Bayes rule.
+4. **Runs GART** (`generalized_allocation_rejection_test`) to select pivot pixels.
+5. **Grows patches** around pivots using `GaussianPatcher` (the core inner loop in
+   `Patcher.allocate()`).
+6. **Saves all inputs and outputs** as `.npz` and CSV files for later comparison with R.
+
+### Key findings during implementation
+
+- The `Calibrator` class has naming inconsistencies: `__init__` stores
+  `self.transition_probability_estimator` but other methods reference `self.tpe`;
+  similarly `self.ev_selector` vs `self.feature_selector`. These are bugs that would
+  crash at runtime. The script bypasses `Calibrator` entirely.
+- `Patcher.allocate()` expects `self.initial_state` and `self.final_state` to be set
+  externally (not in `__init__`). The script sets them directly on the patcher instance.
+- `ekde/ekde/base.py` used `np.bool` which was removed in numpy 1.24+. Fixed to
+  `np.bool_` in both the source file and the installed copy in `.venv`.
+
+### Changes to source code
+
+| File | Change | Reason |
+|------|--------|--------|
+| `ekde/ekde/base.py` | `np.bool` → `np.bool_` | `np.bool` removed in numpy ≥1.24; causes `AttributeError` at runtime |
+
+### Pipeline results (seed=42, 20×20 grid)
+
+- 351 forest pixels in initial map, 10 observed forest→urban transitions in calibration
+- Bayes TPE fitted with ekde KDE (box kernel, Terrel bandwidth)
+- GART selected 11 pivot pixels for transition
+- 3 of 11 patches succeeded (aggregation avoidance rejects the rest), 10 pixels allocated
+- **Deterministic**: two runs with the same seed produce bit-identical results
+
+### Output files
+
+| File | Purpose |
+|------|---------|
+| `scripts/run_allocation.py` | The allocation script |
+| `scripts/output/allocation_seed42.npz` | All arrays in numpy format |
+| `scripts/output/patch_log_seed42.txt` | Human-readable patch log |
+| `scripts/output/csv/*.csv` | All arrays as CSV for R consumption |
+| `scripts/output/csv/params.txt` | Scalar parameters (seed, grid size, patcher config) |
+| `scripts/output/csv/patch_log.csv` | Patch log as proper CSV |
+
+### How to run
+
+```sh
+cd /Users/jhartman/github-repos/clumpy
+MPLBACKEND=Agg uv run python scripts/run_allocation.py --seed 42 --verbose 2
+```
 
 ### Core allocation architecture (from code reading)
 
@@ -189,4 +236,4 @@ The allocation pipeline works as follows:
 
 ---
 
-*Last updated after completing Step 2.*
+*Last updated after completing Step 3.*

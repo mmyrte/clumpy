@@ -134,3 +134,6 @@ cython/*.html
 
 # R specific
 rv/*
+
+# Generated allocation output
+scripts/output/
