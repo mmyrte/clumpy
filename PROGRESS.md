@@ -9,7 +9,7 @@ and R implementations.
 ## Plan
 
 1. ✅ **Set up Python environment** — `uv` with local packages `hyperclip`, `ekde`, `clumpy`
-2. ⬜ **Dead-code removal** — use basedpyright to identify and remove unreachable code
+2. ✅ **Dead-code removal** — use basedpyright to identify and remove unreachable code
 3. ⬜ **Python allocation script** — standalone script with synthetic data exercising `GaussianPatcher` / allocation pipeline
 4. ⬜ **Shell wrapper** — script that runs both the Python allocator and the R function, compares outputs
 5. ⬜ **Rcpp module** — R script with Rcpp module implementing the core allocation possibly making use of `SpatRaster` from `terra` for raster handling.
@@ -53,15 +53,66 @@ MPLBACKEND=Agg uv run python -c "import clumpy; print('OK')"
 
 ---
 
-## Step 2: Dead-Code Removal (basedpyright) — ⬜ TODO
+## Step 2: Dead-Code Removal (basedpyright) — ✅ DONE
 
-Plan:
-- Run basedpyright on the `clumpy/clumpy/` package tree.
-- Identify unreachable code, unused imports, dead branches.
-- Remove conservatively — the codebase uses dynamic patterns (star imports, metaclasses)
-  that may cause false positives.
-- Verify `import clumpy` still works after each round of changes.
-- Be prepared to revert if the analysis breaks runtime behaviour.
+### What was done
+
+Added `basedpyright` as a dev dependency and ran static analysis on `clumpy/clumpy/`.
+Initial scan: **4701 diagnostics** (332 errors, 4369 warnings).
+After cleanup: **4309 diagnostics** (310 errors, 3999 warnings).
+
+The bulk of the remaining diagnostics are type-annotation warnings (`reportUnknownMemberType`,
+`reportUnknownArgumentType`, etc.) — not dead code.  The actionable categories were
+addressed as follows:
+
+| Category | Before | After | Notes |
+|----------|--------|-------|-------|
+| `reportUnusedImport` | 102 | 32 | Remaining 32 are intentional re-exports in `__init__.py` files |
+| `reportMissingImports` | 3 | 0 | Dead files that imported nonexistent modules were deleted |
+| `reportUndefinedVariable` | 6 | 6 | Genuine bugs in broken methods (`nb_monte_carlo`, `Unbiased.allocate`, `Calibrator.__init__`) — not on our critical path, left as-is |
+| `reportUnusedVariable` | 33 | 31 | Mostly loop variables (`for i, x in ...`) or tuple unpacking; harmless |
+| `reportPossiblyUnboundVariable` | 18 | 18 | Mostly conditional initialisation patterns (e.g. `proba_layer`, `P_v__Y`); runtime-valid |
+| `reportInvalidStringEscapeSequence` | 17 | 17 | LaTeX strings in `_cramer_mrmr.py` plot labels; cosmetic only |
+
+### Files deleted
+
+| File | Reason |
+|------|--------|
+| `clumpy/clumpy/_base/_feature_old.py` | Imports from nonexistent modules (`._layer`, `..feature_selection`); dead code |
+| `clumpy/clumpy/ev_selection/_old_pipeline.py` | Imports from nonexistent `._feature_selector`; dead code |
+| `clumpy/clumpy/calibration/_compute_patches.py` | Imports from nonexistent `._patch`; dead code |
+| `hyperclip/cython/hyperfunc_save.pyx` | Backup copy of the Cython source |
+| `ekde/=0.0.8` | Stray file (pip typo artefact) |
+
+### Import cleanup (files edited)
+
+Unused imports were removed from these files:
+
+- `clumpy/clumpy/allocation/_allocator.py` — removed `State`, `create_proba_layer`, `path_split`
+- `clumpy/clumpy/allocation/_unbiased.py` — removed `tqdm`, `deepcopy`, `TransitionMatrix`, `_update_P_v__Y_u`, `generalized_allocation_rejection_test`, `_weighted_neighbors_patcher`
+- `clumpy/clumpy/_base/_area.py` — removed `LandUseLayer`, `Region`, `path_split`
+- `clumpy/clumpy/_base/_land.py` — removed ~20 unused imports; stripped ~300 lines of commented-out code
+- `clumpy/clumpy/_base/_region.py` — removed ~6 unused imports; stripped ~300 lines of commented-out code
+- `clumpy/clumpy/calibration/_calibrator.py` — removed `time`, `ndimage`, `Layer`, `EVLayer`, `LandUseLayer`, `RegionsLayer`, `State`, `EVSelectors`
+- `clumpy/clumpy/patch/_patcher.py` — removed `stats`, `np_drop_duplicates_from_column`
+- `clumpy/clumpy/patch/_log_norm_patcher.py` — removed `scipy_lognorm` (only used in commented-out code)
+- `clumpy/clumpy/transition_probability_estimation/_bayes.py` — removed `title_heading`, `Palette`
+- `clumpy/clumpy/transition_probability_estimation/_tpe.py` — removed `np`, `Palette`, `title_heading`
+- `clumpy/clumpy/ev_selection/_ev_selectors.py` — removed `pd`, `EVLayer`, `State`
+- `clumpy/clumpy/ev_selection/_cramer_mrmr.py` — removed `KBinsDiscretizer`, `warnings`, `sys`
+- `clumpy/clumpy/case/_case.py` — removed `LandUseLayer`, `RegionsLayer`, `start_log`, `stop_log`, `Palette`, `load_palette`, `load_transition_matrix`, `datetime`, `json`, `logging`
+- `clumpy/clumpy/metrics/_rec.py` — removed `simpson`
+
+### Known bugs found (not fixed — not on critical path)
+
+| Location | Issue |
+|----------|-------|
+| `allocation/_allocator.py:91,93` (`nb_monte_carlo`) | References `lul_origin` which is not a parameter or local variable |
+| `allocation/_unbiased.py:68,74,76` (`Unbiased.allocate`) | References `tm`, `mask`, `features` which are not defined |
+| `calibration/_calibrator.py:29` (`Calibrator.__init__`) | References `FeatureSelectors` which is not imported |
+| `calibration/_calibrator.py:68` (`Calibrator.check`) | References `Pipeline` which is not imported |
+
+These are broken methods that would crash at runtime but are not called by any current working path.
 
 ---
 
@@ -73,9 +124,37 @@ Plan:
 - Write a self-contained script that generates synthetic raster data (land-use map +
   explanatory variables) and runs `GaussianPatcher`-based allocation.
 - Key entry points to investigate:
-  - `clumpy.case._engine.Engine` — appears to be the top-level orchestrator
+  - `clumpy.case._case.Case` — the top-level orchestrator
+  - `clumpy.case._engine.Engine` — another top-level runner
   - `clumpy.allocation._allocator.Allocator` — the allocation dispatcher
-  - `clumpy.patch._gaussian_patcher.GaussianPatcher` — patch-level change placement
+  - `clumpy.allocation._unbiased.Unbiased` — the unbiased allocation method
+  - `clumpy.allocation._gart.generalized_allocation_rejection_test` — GART sampling
+  - `clumpy.patch._patcher.Patcher.allocate` — the core patch-growing loop
+  - `clumpy.patch._gaussian_patcher.GaussianPatcher` — Gaussian patch size sampling
+
+### Core allocation architecture (from code reading)
+
+The allocation pipeline works as follows:
+
+1. **Calibration**: Given initial + final LUC maps and explanatory variables (EVs),
+   fit a Bayesian transition probability estimator (`Bayes` using `ekde.KDE`) per
+   land/transition.
+
+2. **Transition probability estimation**: For a new LUC map, compute per-pixel
+   transition probabilities P(v|u,Y) using the calibrated KDE densities and Bayes rule.
+
+3. **Allocation** (`Unbiased` or `UnbiasedMonoPixel`):
+   - Use GART (generalized allocation rejection test) to sample which pixels transition.
+   - For patch-based allocation (`Unbiased`), grow patches around kernel pixels using
+     `Patcher.allocate()`, which:
+     - Samples a patch area from the configured distribution (Gaussian/LogNorm/Bootstrap).
+     - Grows the patch by iteratively selecting neighbours weighted by their transition
+       probability and eccentricity constraint.
+     - Checks aggregation avoidance.
+
+4. **Patch growth** (`_patcher.py:Patcher.allocate`): This is the core inner loop we
+   need to port. It uses a convolution-based neighbour finder, probability weighting,
+   and eccentricity-based shape control.
 
 ---
 
@@ -96,9 +175,7 @@ Plan:
 
 ---
 
-## Files That May Be Deletable
-
-These appear to be ad-hoc or stale artefacts found during exploration:
+## Files That May Still Be Deletable
 
 | File | Reason |
 |------|--------|
@@ -106,13 +183,10 @@ These appear to be ad-hoc or stale artefacts found during exploration:
 | `clumpy/before_alloc.pdf` | Looks like a one-off visualisation |
 | `clumpy/architecture.drawio` | Diagram, not used by code |
 | `clumpy/new_params.json` | Looks like a one-off experiment config |
-| `clumpy/clumpy/_base/_feature_old.py` | Filename suggests deprecated |
-| `ekde/=0.0.8` | Stray file (looks like a pip typo artifact) |
 | `ekde/ekde/new_whitening_transformer_illustration.py` | Illustration script, not library code |
 | `ekde/setup_annotate.py` / `ekde/setup_annotate.py.save` | Development-only Cython annotation helpers |
 | `hyperclip/setup_annotate.py` | Development-only Cython annotation helper |
-| `hyperclip/cython/hyperfunc_save.pyx` | Backup copy of the Cython source |
 
 ---
 
-*Last updated after completing Step 1.*
+*Last updated after completing Step 2.*

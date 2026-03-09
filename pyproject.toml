@@ -18,6 +18,11 @@ dependencies = [
     "clumpy",
 ]
 
+[dependency-groups]
+dev = [
+    "basedpyright",
+]
+
 [tool.uv.sources]
 ekde = { path = "ekde" }
 hyperclip = { path = "hyperclip" }
