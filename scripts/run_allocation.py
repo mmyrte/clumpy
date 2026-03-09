@@ -295,11 +295,28 @@ def run_pipeline(seed: int, rows: int = 20, cols: int = 20, verbose: int = 1):
     np.random.seed(seed + 2)
     total_allocated = 0
     patch_log = []  # list of (j_pivot, final_state, n_allocated, j_list)
+    areas_sampled = []  # record the exact area drawn for each pivot
+    eccentricities_sampled = []  # record the exact eccentricity for each pivot
+
+    # Monkey-patch GaussianPatcher._sample to record draws into a mutable list
+    _draw_buf = []  # temporary buffer filled by _recording_sample, read after each allocate()
+    _original_sample = patcher._sample.__func__
+
+    def _recording_sample(self, n):
+        areas, eccs = _original_sample(self, n)
+        _draw_buf.append((areas.copy(), eccs.copy()))
+        return areas, eccs
+
+    import types
+
+    patcher._sample = types.MethodType(_recording_sample, patcher)
 
     for i in range(n_pivot):
         j = J_pivot[i]
         v = V_pivot[i]
         assert v == 2, f"Expected final_state=2, got {v}"
+
+        _draw_buf.clear()
 
         s, J_used = patcher.allocate(
             lul=luc_alloc,
@@ -307,6 +324,16 @@ def run_pipeline(seed: int, rows: int = 20, cols: int = 20, verbose: int = 1):
             j=j,
             proba_layer=proba_urban_layer,
         )
+
+        # Record the area/eccentricity that was actually drawn for this pivot.
+        # If _sample was never called (early exit because pixel already transited),
+        # record 0.0 as a sentinel so the R replay has exactly n_pivot entries.
+        if _draw_buf:
+            areas_sampled.append(float(_draw_buf[0][0][0]))
+            eccentricities_sampled.append(float(_draw_buf[0][1][0]))
+        else:
+            areas_sampled.append(0.0)
+            eccentricities_sampled.append(0.0)
 
         patch_log.append((int(j), int(v), int(s), [int(x) for x in J_used]))
 
@@ -362,6 +389,9 @@ def run_pipeline(seed: int, rows: int = 20, cols: int = 20, verbose: int = 1):
         "patcher_eccentricity": patcher.eccentricity,
         "patcher_neighbors_structure": patcher.neighbors_structure,
         "patcher_avoid_aggregation": patcher.avoid_aggregation,
+        # Per-pivot random draws (for deterministic R replay)
+        "areas_sampled": np.array(areas_sampled),
+        "eccentricities_sampled": np.array(eccentricities_sampled),
     }
 
     return results, patch_log
@@ -464,6 +494,20 @@ def main():
         f.write(f"initial_state=1\n")
         f.write(f"final_state=2\n")
         f.write(f"final_states_for_tpe=1,2\n")
+
+    # Save per-pivot random draws for deterministic R replay
+    np.savetxt(
+        csv_dir / "areas_sampled.csv",
+        results["areas_sampled"],
+        fmt="%.15g",
+        delimiter=",",
+    )
+    np.savetxt(
+        csv_dir / "eccentricities_sampled.csv",
+        results["eccentricities_sampled"],
+        fmt="%.15g",
+        delimiter=",",
+    )
 
     # Print summary comparison
     luc_init = results["luc_initial"]

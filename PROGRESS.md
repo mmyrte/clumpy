@@ -11,8 +11,8 @@ and R implementations.
 1. ✅ **Set up Python environment** — `uv` with local packages `hyperclip`, `ekde`, `clumpy`
 2. ✅ **Dead-code removal** — use basedpyright to identify and remove unreachable code
 3. ✅ **Python allocation script** — standalone script with synthetic data exercising `GaussianPatcher` / allocation pipeline
-4. ⬜ **Shell wrapper** — script that runs both the Python allocator and the R function, compares outputs
-5. ⬜ **Rcpp module** — R script with Rcpp module implementing the core allocation possibly making use of `SpatRaster` from `terra` for raster handling.
+4. ✅ **Shell wrapper + Rcpp module** — C++ allocation via `Rcpp::sourceCpp()`, R driver, shell wrapper; **perfect cell-by-cell match** with Python
+5. ⬜ **Full Rcpp module** — expand to cover calibration / TPE fitting, optimised data structures, `terra` raster I/O
 
 ---
 
@@ -205,20 +205,102 @@ The allocation pipeline works as follows:
 
 ---
 
-## Step 4: Shell Wrapper — ⬜ TODO
+## Step 4: Shell Wrapper + Rcpp Module — ✅ DONE
 
-- Wrap the Python script from step 3 in a shell script.
-- Add an R invocation of the Rcpp module from step 5.
-- Compare outputs numerically (cell-by-cell diff of output rasters).
+### What was done
+
+Created a complete cross-language verification pipeline:
+
+1. **`scripts/rcpp/allocate.cpp`** — standalone C++ source compiled at runtime via
+   `Rcpp::sourceCpp()`.  Implements:
+   - `gart_cpp()` / `gart_with_u_cpp()` — GART (generalized allocation rejection test).
+   - `patch_allocate_cpp()` — single-patch growth (convolution-based neighbour finding,
+     moment-based eccentricity weighting, aggregation avoidance, hollow filling).
+   - `run_allocation_cpp()` — orchestrator that iterates over pivot pixels and calls
+     `patch_allocate_cpp` for each.
+
+2. **`scripts/run_allocation.R`** — R driver script that:
+   - Reads all CSV inputs produced by the Python pipeline (Step 3).
+   - Compiles `allocate.cpp` via `Rcpp::sourceCpp()`.
+   - Runs the allocation with R's own RNG (structural comparison).
+   - If `areas_sampled.csv` exists (exported by Python), replays the exact draws
+     for a **deterministic cell-by-cell comparison**.
+   - Prints patch logs, diff grids, and summary statistics.
+
+3. **`scripts/compare.sh`** — end-to-end shell wrapper that:
+   - Runs `run_allocation.py` (Python, via `uv run`).
+   - Activates `rv`, then runs `run_allocation.R` (R, via `Rscript`).
+   - Performs a final Python-based cell-by-cell diff of both output maps.
+
+4. **`scripts/run_allocation.py` (updated)** — instrumented `GaussianPatcher._sample()`
+   to record the exact area/eccentricity drawn for each pivot, saved as
+   `areas_sampled.csv` and `eccentricities_sampled.csv` for deterministic R replay.
+
+### Key findings during implementation
+
+- **Float vs int area comparison**: Python's `Patcher.allocate()` uses
+  `while len(J_allocated) < area` where `area` is a float (e.g. 2.249).
+  An initial C++ implementation rounded to `int`, causing patches to be 1 pixel
+  smaller.  Fixed by keeping the float comparison — **this was the only logic bug**.
+
+- **RNG divergence is expected**: R and numpy use different MT19937 implementations,
+  so `set.seed(42)` and `np.random.seed(42)` produce different uniform sequences.
+  The deterministic replay sidesteps this by passing Python's exact area draws to the
+  C++ code.
+
+- **No hollow-fill RNG consumed**: In the seed=42 test case, no patch growth step
+  triggers the hollow-fill branch (`np.random.choice(j_hollows)`), so the area draws
+  are the only stochastic element.  The argmax-based neighbour selection is fully
+  deterministic given the same probability map and area.
+
+### Results (seed=42, 20×20 grid)
+
+| Metric | Python | R (own RNG) | R (replay) |
+|--------|--------|-------------|------------|
+| Total allocated | 10 | 10 | 10 |
+| Patches succeeded | 3/11 | 4/11 | 3/11 |
+| Cells differing vs Python | — | 6/400 | **0/400** |
+
+**Perfect cell-by-cell match** when using identical random draws.
+
+### Changes to source code
+
+| File | Change | Reason |
+|------|--------|--------|
+| `scripts/run_allocation.py` | Added instrumented `_sample()` + CSV export of area/eccentricity draws | Enables deterministic R replay |
+
+### New files
+
+| File | Purpose |
+|------|---------|
+| `scripts/rcpp/allocate.cpp` | Rcpp C++ source: GART + patch growth + allocation driver |
+| `scripts/run_allocation.R` | R driver: load CSVs, compile Rcpp, run allocation, compare |
+| `scripts/compare.sh` | Shell wrapper: Python → R → diff |
+
+### How to run
+
+```sh
+cd /Users/jhartman/github-repos/clumpy
+
+# Full pipeline (Python + R + comparison):
+bash scripts/compare.sh --seed 42 --verbose 2
+
+# R only (assumes Python CSVs already exist):
+rv activate
+Rscript scripts/run_allocation.R --pydir scripts/output/csv --verbose 2
+
+# Python only (regenerate CSVs):
+MPLBACKEND=Agg uv run python scripts/run_allocation.py --seed 42 --verbose 2
+```
 
 ---
 
-## Step 5: Rcpp Module — ⬜ TODO
+## Step 5: Full Rcpp Module — ⬜ TODO
 
-- R package skeleton with `Rcpp` and `terra` dependencies.
-- Port the core allocation loop (probability sorting + patch placement).
-- Optimised data structures (priority queues, neighbour lookup) in C++.
-- Read/write rasters via `terra`'s C++ API or R-level SpatRaster ↔ matrix.
+- Expand Rcpp module to cover calibration / TPE fitting (currently uses Python-exported probabilities).
+- Optimised data structures (priority queues, neighbour lookup) in C++ for larger grids.
+- Read/write rasters via `terra`'s R-level SpatRaster ↔ matrix interface.
+- Package skeleton (`R CMD build`) if needed for deployment.
 
 ---
 
@@ -236,4 +318,4 @@ The allocation pipeline works as follows:
 
 ---
 
-*Last updated after completing Step 3.*
+*Last updated after completing Step 4.*
