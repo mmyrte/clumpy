@@ -126,7 +126,7 @@ class KDE():
         if self.wt:
             X = self._wt.transform(X)
         
-        id_out_of_bounds = np.zeros(X.shape[0]).astype(np.bool)
+        id_out_of_bounds = np.zeros(X.shape[0]).astype(np.bool_)
         for hyp in self._bounds_hyperplanes:
             id_out_of_bounds = np.any((id_out_of_bounds, ~hyp.side(X)), axis=0)
         Z = self._discretize(X)
