@@ -1,0 +1,48 @@
+The interactions between land use and cover change (LUCC) and global changes such as
+climate change and global biodiversity loss have been recognized and analyzed for
+several decades. Thus, many research fields (environment, geography, landscape ecology,
+etc.) or the decision support sector of land use planning employ LUCC models. Their use
+allows users to better understand the drivers of these changes and to make projections
+by generating simulated land use and cover maps (the latter having an important role in
+the appropriation of these models by decision makers).
+
+Among the different possible approaches, this thesis focuses on spatially explicit,
+statistical pattern-based LUCC models. This type of model takes as input land use maps
+and explanatory variables (such as elevation, distance to roads, soil type, etc.), and
+returns as output probability maps of transition from one land use to another and can
+also perform an allocation, i.e. the simulation (and future projection) of a land use
+and land cover map. These outputs are determined from input elements (called calibration
+elements) and from a scenario that characterizes a (potentially unprecedented) situation
+that the user wishes to evaluate. However, it has been shown in the literature that if
+the same case study is analyzed with the help of different models of this type,
+different results are obtained, to varying degrees. These differences are significant
+and raise questions about the reliability of the models and the validity of all the
+results obtained so far in all scientific fields where such tools are used.
+
+In this thesis, LUCC pattern-based modeling approach is formalized in a modular
+architecture where one distinguishes the calibration-estimation, allocation and
+explanatory variable selection steps. Each of these processes is studied independently
+in order to focus only on the corresponding problem. Thus, the calibration-estimation
+module is mathematically formalized and a method based on Bayes rule and kernel-based
+density estimation is proposed (BayeseKDE). An evaluation process based on a perfectly
+controlled problem setting is introduced and offers a basis to evaluate objectively this
+module. Some of the methods implemented in existing numerical modeling environments are
+analyzed, compared and criticized. The Bayes-eKDE procedure proves to be very efficient
+compared to the others in terms of results accuracy and computation time. The allocation
+module is also formalized. The notion of allocation bias is introduced and is the basis
+of an evaluation process of the module. Two unbiased allocation methods (uSAM and uPAM)
+are proposed and their superiority over other methods found in a representative subset
+of modeling software is illustrated in a series of case studies of increasing
+complexity. Finally, a method for selecting explanatory variables that maximizes their
+relevance while minimizing their redundancy is introduced proposed (Cramer-MRMR). Its
+parameterization is illustrated through a case study. All these methods are implemented
+in an open-source Python package named CLUMPY for Comprehensive Land Use [and cover]
+Model in PYthon. This software is a deliverable of this thesis and acts as a
+demonstrator of the methods proposed in this work, while being already usable by an
+informed user on his own case study. A graphical user interface (GUI) allows to
+configure a simple case study.
+
+Many current issues in territorial planning tend to rely more and more on LUCC modeling
+(food autonomy, land artificialisation, local economy, etc.). The advances in this field
+introduced in this thesis are therefore essential to guarantee the validity of the
+corresponding answers.

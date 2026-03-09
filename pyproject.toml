@@ -1,0 +1,28 @@
+[project]
+name = "clumpy-workspace"
+version = "0.1.0"
+description = "Workspace for clumpy LUCC modeling packages"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.19.2,<2.0",
+    "matplotlib",
+    "scipy",
+    "tqdm",
+    "scikit-learn",
+    "scikit-image",
+    "pandas",
+    "rasterio",
+    "cython",
+    "ekde",
+    "hyperclip",
+    "clumpy",
+]
+
+[tool.uv.sources]
+ekde = { path = "ekde" }
+hyperclip = { path = "hyperclip" }
+clumpy = { path = "clumpy" }
+
+[tool.uv.extra-build-dependencies]
+ekde = ["numpy<2.0", "cython"]
+hyperclip = ["numpy<2.0", "cython"]
