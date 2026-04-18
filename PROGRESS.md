@@ -308,10 +308,6 @@ MPLBACKEND=Agg uv run python scripts/run_allocation.py --seed 42 --verbose 2
 
 | File | Reason |
 |------|--------|
-| `clumpy/after_alloc.pdf` | Looks like a one-off visualisation |
-| `clumpy/before_alloc.pdf` | Looks like a one-off visualisation |
-| `clumpy/architecture.drawio` | Diagram, not used by code |
-| `clumpy/new_params.json` | Looks like a one-off experiment config |
 | `ekde/ekde/new_whitening_transformer_illustration.py` | Illustration script, not library code |
 | `ekde/setup_annotate.py` / `ekde/setup_annotate.py.save` | Development-only Cython annotation helpers |
 | `hyperclip/setup_annotate.py` | Development-only Cython annotation helper |
