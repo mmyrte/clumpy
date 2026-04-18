@@ -13,6 +13,7 @@ and R implementations.
 3. ✅ **Python allocation script** — standalone script with synthetic data exercising `GaussianPatcher` / allocation pipeline
 4. ✅ **Shell wrapper + Rcpp module** — C++ allocation via `Rcpp::sourceCpp()`, R driver, shell wrapper; **perfect cell-by-cell match** with Python
 5. ⬜ **Full Rcpp module** — expand to cover calibration / TPE fitting, optimised data structures, `terra` raster I/O
+6. ⬜ **Dinamica EGO compatibility** — map clumpy's inputs/outputs to Dinamica EGO conventions so the two tools can be used interchangeably or in tandem
 
 ---
 
@@ -304,6 +305,32 @@ MPLBACKEND=Agg uv run python scripts/run_allocation.py --seed 42 --verbose 2
 
 ---
 
+## Step 6: Dinamica EGO Compatibility — ⬜ TODO
+
+Dinamica EGO is a widely-used LUCC modelling platform.  Making clumpy inputs and
+outputs interchangeable with Dinamica EGO conventions would allow practitioners to
+compare models or use clumpy as a drop-in calibration / allocation step within a
+Dinamica workflow.
+
+### Planned work
+
+- **Transition matrix format**: verify that clumpy's transition matrix CSV conventions
+  match what Dinamica EGO expects; add import/export helpers if needed.
+- **Patcher parameter tables**: map clumpy's `GaussianPatcher` / `LogNormPatcher`
+  configuration (mean area, variance, isometry/eccentricity) to Dinamica's patch-size
+  and isometry table format (`.csv`).
+- **Probability maps**: ensure per-pixel transition probability rasters produced by
+  clumpy can be consumed directly by Dinamica EGO's allocation step (and vice versa).
+- **Aggregation / expander flags**: confirm that clumpy's `avoid_aggregation` flag
+  corresponds to Dinamica's expander/patcher distinction; document the mapping.
+- **Two-pass allocation**: investigate whether a two-pass scheme (expander first,
+  then patcher) is needed to replicate Dinamica EGO's patch-seeding behaviour, and
+  implement if required.
+- **Validation**: run both tools on a common test case and compare allocated maps
+  (patch count, size distribution, spatial pattern metrics).
+
+---
+
 ## Files That May Still Be Deletable
 
 | File | Reason |
@@ -314,4 +341,4 @@ MPLBACKEND=Agg uv run python scripts/run_allocation.py --seed 42 --verbose 2
 
 ---
 
-*Last updated after completing Step 4.*
+*Last updated: added Step 6 (Dinamica EGO compatibility) to plan.*

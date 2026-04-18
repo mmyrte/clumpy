@@ -1,3 +1,5 @@
+> **This package is part of the [clumpy fork monorepo](../README.md).** See the top-level README for build instructions, the Rcpp allocation port, and overall project goals.
+
 # hyperclip
 
 This Python 3.5+ package implements volume computation of hypercubes clipped by hyperplanes.
