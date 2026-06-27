@@ -1,17 +1,23 @@
 #!/usr/bin/env Rscript
 # ---------------------------------------------------------------------------
-# Step 4 — R allocation driver
+# EXPLORATION — standalone Rcpp allocation driver
 #
-# Loads the CSV outputs from the Python pipeline (Step 3), compiles the Rcpp
+# NOTE: this is the original *exploration* that verified a standalone Rcpp
+# re-implementation of clumpy's patch grower against the Python reference by
+# replaying identical random draws (cell-by-cell match).  It is NOT the
+# evoland allocator.  For the comparison of the Python reference against the
+# evoland uSAM/uPAM routines, see scripts/comparison/.
+#
+# Loads the CSV outputs from the Python pipeline, compiles the standalone Rcpp
 # C++ allocation module, runs the R allocation using identical inputs, and
 # compares results cell-by-cell.
 #
 # Usage (from repo root, after rv activate):
-#   Rscript scripts/run_allocation.R [--pydir scripts/output/csv] [--verbose 2]
+#   Rscript scripts/exploration/run_allocation.R [--pydir scripts/output/csv] [--verbose 2]
 #
 # The script:
 #   1. Reads all inputs that run_allocation.py saved as CSV.
-#   2. Compiles scripts/rcpp/allocate.cpp via Rcpp::sourceCpp().
+#   2. Compiles scripts/exploration/allocate.cpp via Rcpp::sourceCpp().
 #   3. Replays the Python random draws (areas, eccentricities, GART uniforms)
 #      from the saved CSV data so the C++ code operates on identical inputs.
 #   4. Calls run_allocation_cpp() to execute patch growth.
@@ -47,7 +53,7 @@ suppressPackageStartupMessages(library(Rcpp))
 # ---- Compile the Rcpp module -----------------------------------------------
 cat("=== R Allocation Driver ===\n")
 cat("Compiling Rcpp module ...\n")
-sourceCpp("scripts/rcpp/allocate.cpp")
+sourceCpp("scripts/exploration/allocate.cpp")
 cat("  OK\n\n")
 
 # ---- Read Python outputs ---------------------------------------------------

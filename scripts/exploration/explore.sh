@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# Step 4 — Shell wrapper: run Python allocator, then R allocator, compare.
+# EXPLORATION — wrapper: run Python allocator, then the standalone Rcpp
+# re-implementation, and diff cell-by-cell.
+#
+# NOTE: this exercises the original standalone-Rcpp *exploration*
+# (scripts/exploration/), not the evoland allocator.  For the Python-vs-evoland
+# uSAM/uPAM comparison see scripts/comparison/compare_evoland.sh.
 #
 # Usage (from repo root):
-#   bash scripts/compare.sh [--seed 42] [--verbose 2]
+#   bash scripts/exploration/explore.sh [--seed 42] [--verbose 2]
 #
 # Prerequisites:
 #   - uv-managed Python environment with clumpy/ekde/hyperclip installed
@@ -85,7 +90,7 @@ rv activate 2>/dev/null || true
 # source the driver script.  Arguments after --args are passed to
 # commandArgs(trailingOnly=TRUE) inside the R session.
 Rscript --no-save --no-restore \
-    -e "source('scripts/run_allocation.R')" \
+    -e "source('scripts/exploration/run_allocation.R')" \
     --pydir "$PYDIR" --verbose "$VERBOSE" 2>&1
 
 if [[ ! -f "$R_OUTDIR/luc_allocated_r.csv" ]]; then
