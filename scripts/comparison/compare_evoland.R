@@ -116,7 +116,11 @@ to_rowmajor <- function(M) as.vector(t(M))
 from_rowmajor <- function(v) matrix(v, nrow = nr, ncol = nc, byrow = TRUE)
 
 ant <- as.integer(to_rowmajor(luc_initial))
-probs <- matrix(as.numeric(to_rowmajor(proba_urban)), ncol = 1L)
+# Sparse single-transition (forest -> urban) potential: cells with nonzero value.
+prob_vec <- as.numeric(to_rowmajor(proba_urban))
+nz <- which(prob_vec != 0)
+prob_cell <- list(as.integer(nz))
+prob_value <- list(prob_vec[nz])
 
 cat(sprintf(
   "Grid %dx%d | forest cells=%d | transition %d->%d\n",
@@ -156,7 +160,7 @@ run_evo <- function(method_code, rarefy, avoid_agg, area_dist_code,
   allocate_clumpy_cpp(
     landscape = ant, nrow = nr, ncol = nc,
     trans_from = initial_state, trans_to = final_state,
-    probs = probs, area_mean = am, area_var = av,
+    prob_cell = prob_cell, prob_value = prob_value, area_mean = am, area_var = av,
     elongation = elongation, target_rate = target_rate,
     method = method_code, batch_size = batch, rarefy = rarefy, shuffle = TRUE,
     avoid_aggregation = avoid_agg, area_dist = area_dist_code
@@ -191,7 +195,7 @@ mc_metrics <- function(method_code, rarefy, avoid_agg, area_dist_code,
 # ---- 1. MuST (pivot mechanism) equivalence ---------------------------------
 cat("--- 1. MuST pivot mechanism (clumpy calls it GART) ---\n")
 forest <- ant == initial_state
-p_urb <- probs[forest, 1]
+p_urb <- prob_vec[forest]
 P_must <- cbind(1 - p_urb, p_urb) # [stay, urban] for forest cells
 expected_pivots <- sum(p_urb)
 
