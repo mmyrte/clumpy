@@ -8,19 +8,19 @@
 # straight from the evoland-plus sources) on the same synthetic inputs the
 # Python reference pipeline produced, and compare:
 #
-#   1. GART (pivot mechanism) - evoland gart_cpp vs the Python GART vs the
+#   1. MuST (pivot mechanism) - evoland must_cpp vs the Python GART vs the
 #      analytic expectation E[#pivots] = sum_j P(v|u,z_j).
-#   2. Allocation quantity of change - Python reference vs three evoland
-#      configurations:
-#        a. uSAM, rarefy = FALSE  -> mirrors the (biased) Python *script*,
-#           which feeds P(v|u,z) straight to GART then grows ~E(sigma) patches,
-#           so it over-allocates by ~mean patch area.
-#        b. uSAM, rarefy = TRUE   -> the 1/E(sigma) correction (Mazy Fig. 3.2):
-#           pivots are rarefied so the allocated quantity matches the target.
-#        c. uPAM, rarefy = TRUE   -> iterative quota: hits the target exactly.
+#   2. Allocation quantity of change - Python reference vs evoland configs:
+#        * uSAM (mono-pixel) - the simple single-pass method.
+#        * uPAM normal +agg  - direct analogue of the Python GaussianPatcher
+#          (normal area draw + aggregation avoidance), with 1/E(sigma) rarefaction
+#          so the quantity tracks the target rate.
+#        * uPAM normal -agg  - same, but with aggregation avoidance off, to show
+#          patches merging into larger blobs.
+#        * uPAM lognorm +agg - log-normal area distribution instead of normal.
 #   3. Patch structure - count / mean area / elongation of the newly-created
-#      patches (8-connected components, measured identically for both tools via
-#      evoland's calculate_class_stats_cpp).
+#      patches (8-connected components, measured identically for all tools via
+#      evoland's calculate_class_stats_cpp), averaged over the Monte-Carlo seeds.
 #
 # Quantity metrics are averaged over --nrep seeds because evoland and numpy use
 # different RNGs (no cell-by-cell match is expected here; that was the point of
@@ -79,7 +79,7 @@ if (!file.exists(evo_src)) {
 }
 cat("=== Python-vs-evoland allocation comparison ===\n")
 cat("Compiling evoland backend from", normalizePath(opts$evoland), "...\n")
-sourceCpp(evo_src) # allocate_clumpy_cpp, gart_cpp, ...
+sourceCpp(evo_src) # allocate_clumpy_cpp, must_cpp, ...
 sourceCpp(stats_src) # calculate_class_stats_cpp
 cat("  OK\n\n")
 
@@ -188,22 +188,22 @@ mc_metrics <- function(method_code, rarefy, avoid_agg, area_dist_code,
   )
 }
 
-# ---- 1. GART (pivot mechanism) equivalence ---------------------------------
-cat("--- 1. GART pivot mechanism ---\n")
+# ---- 1. MuST (pivot mechanism) equivalence ---------------------------------
+cat("--- 1. MuST pivot mechanism (clumpy calls it GART) ---\n")
 forest <- ant == initial_state
 p_urb <- probs[forest, 1]
-P_gart <- cbind(1 - p_urb, p_urb) # [stay, urban] for forest cells
+P_must <- cbind(1 - p_urb, p_urb) # [stay, urban] for forest cells
 expected_pivots <- sum(p_urb)
 
 mc_pivots <- vapply(seq_len(opts$nrep), function(s) {
   set.seed(s)
-  sum(gart_cpp(P_gart, c(initial_state, final_state)) == final_state)
+  sum(must_cpp(P_must, c(initial_state, final_state)) == final_state)
 }, numeric(1))
 
-py_pivots <- sum(pvec("V_gart.csv") != initial_state)
+py_pivots <- sum(pvec("V_gart.csv") != initial_state) # clumpy output file name
 
 cat(sprintf("  analytic   E[#pivots] = sum P(v|u,z) = %.2f\n", expected_pivots))
-cat(sprintf("  evoland    gart_cpp   = %.2f +/- %.2f (mean over %d seeds)\n", mean(mc_pivots), sd(mc_pivots), opts$nrep))
+cat(sprintf("  evoland    must_cpp   = %.2f +/- %.2f (mean over %d seeds)\n", mean(mc_pivots), sd(mc_pivots), opts$nrep))
 cat(sprintf("  python     GART       = %d (single draw)\n\n", py_pivots))
 
 # ---- 2 & 3. Allocation quantity + patch structure --------------------------
@@ -258,7 +258,7 @@ get_changed <- function(label) res$changed_mean[res$method == label]
 get_np <- function(label) res$n_patch[res$method == label]
 cat("\n--- interpretation ---\n")
 cat(sprintf(
-  "* Pivot mechanism: evoland gart_cpp mean (%.2f) matches the analytic\n  expectation (%.2f) and the Python GART draw (%d) -> equivalent (RNG noise).\n",
+  "* Pivot mechanism: evoland must_cpp mean (%.2f) matches the analytic\n  expectation (%.2f) and the Python GART draw (%d) -> equivalent (RNG noise).\n",
   mean(mc_pivots), expected_pivots, py_pivots
 ))
 cat(sprintf(

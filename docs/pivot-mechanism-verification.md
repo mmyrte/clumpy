@@ -153,3 +153,43 @@ contest cells, pivot order).
 | Pivot strategy vs canonical bias-free uPAM | ⚠ simplified single-pass; no per-patch P(v|u) update, no merge rollback, doesn't dismiss all-but-one pivot |
 | 1/E(σ) pivot rarefaction before GART | ✖ missing ⇒ ~E(σ)× over-allocation (confirm `rate` semantics) |
 | Determinism via 0/1 potentials | ✔ bypasses GART draw; area & pivot-order still stochastic |
+
+---
+
+## Implementation status (addendum)
+
+The findings above were the audit of the initial implementation. The evoland
+allocation backend (`evoland-plus/src/alloc_clumpy.cpp`,
+`R/alloc_clumpy.R`) was subsequently reworked to resolve them:
+
+- **Whole routine in Rcpp.** `allocate_clumpy_cpp()` runs neighbour precompute,
+  the pivot test, area draws and the pivot/patch loop in one C++ call; the former
+  R helpers (`gart`, `sample_lognorm_area`, `raster_neighbors`) are replaced by
+  `must_cpp`, `sample_lognorm_area_cpp`, `raster_neighbors_cpp`.
+- **uSAM + uPAM**, auto-selected from the patch parameters: all mono-pixel
+  transitions (`area_mean == 1` & `area_var == 0`) → uSAM, otherwise → uPAM
+  (iterative MuST with a per-transition pixel quota and sampling without
+  replacement). uPAM is affordable because evoland's fixed-model potentials are
+  pool-independent, so rho(z|u) is never re-estimated between patches.
+- **1/E(sigma) rarefaction** applied to the MuST input (`rate` confirmed to be a
+  quantity-of-change rate via `get_obs_trans_rates`); **negative/NaN clamp**
+  added inside the pivot test.
+- **Aggregation avoidance** (`avoid_aggregation`, default TRUE for uPAM):
+  deferred-write, all-or-nothing patch growth — a patch that would merge with
+  another patch of the same transition, or cannot reach its sampled area, fails
+  and allocates nothing; attempted cells are removed from the pool. Replicates
+  this package's `GaussianPatcher` (the "no merge-failure rollback" gap above).
+- **Patch-area distribution exposed** via `area_dist` (`"lognormal"` default,
+  `"normal"`); `area_var` is a variance (normal uses sd = `sqrt(area_var)`).
+- **Shape metric unified** into `clumpy::elongation_from_raw_moments`
+  (`src/clumpy_geometry.h`); the parameter is named `elongation` (was
+  `eccentricity`) to match the thesis.
+- **Naming:** the pivot test is exported as `must_cpp` (Multinomial Sampling
+  Test, Mazy App. 3.B), not `gart_cpp`. The thesis never uses the "GART" /
+  "generalized allocation rejection test" name — that is local to this `clumpy`
+  codebase, and what it computes is exactly MuST; "rejection test" in the thesis
+  refers only to Dinamica EGO's distinct two-stage process.
+
+The `scripts/comparison/` driver confirms the pivot mechanism matches the
+reference and that evoland uPAM (`normal +agg`) tracks this package's
+`GaussianPatcher` in quantity and patch structure.
