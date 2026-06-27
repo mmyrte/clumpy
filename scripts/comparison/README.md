@@ -46,19 +46,32 @@ toolchain (binary packages from <https://p3m.dev>), and an `evoland-plus`
 checkout (default `../evoland-plus`). Results are printed and written to
 `../output/comparison/results.csv`.
 
-## Headline findings (seed 42)
+## Headline findings (300 reps, seed 42)
+
+The direct analogue of the Python reference is **`evoland uPAM normal +agg`**:
+same area distribution (normal/Gaussian) and aggregation avoidance as clumpy's
+`GaussianPatcher`.
+
+| method | changed | n_patch | patch area |
+|---|---|---|---|
+| python clumpy (Gaussian +agg) | 10.0 | 3.0 | 3.3 |
+| evoland uPAM normal +agg | 8.0 | 2.2 | 4.0 |
+| evoland uPAM normal −agg | 9.5 | 1.7 | 6.3 |
+| evoland uSAM (mono-pixel) | 9.8 | 3.4 | 3.3 |
 
 - **Pivot mechanism is equivalent.** evoland `gart_cpp` reproduces the analytic
   pivot expectation and the Python GART draw (differences are pure RNG noise).
-- **Rarefaction matters.** `uSAM(rarefy=TRUE)` and `uPAM` track the calibrated
-  target quantity of change (`rate × #forest`); `uPAM` enforces it exactly via
-  the quota. Without the `1/E(σ)` rarefaction, `uSAM` over-allocates.
-- **Aggregation avoidance is the main behavioural gap.** The Python
-  `GaussianPatcher` runs with `avoid_aggregation=TRUE` and rejects patches that
-  would merge, producing several small patches; evoland's grower has no merge
-  avoidance, so adjacent patches coalesce into fewer, larger blobs. This is the
-  "no merge-failure rollback" point from
-  [`evoland-plus/dev/pivot-mechanism-verification.md`](https://github.com/ethzplus/evoland-plus/blob/copilot/discuss-transition-probability-estimation/dev/pivot-mechanism-verification.md)
-  and the main thing to weigh next (expander vs patcher semantics).
-- Patch-area *distributions* differ by construction (Python Gaussian vs evoland
-  log-normal); elongation is measured the same way for both.
+- **Rarefaction matters.** With the `1/E(σ)` rarefaction the uPAM quota tracks
+  the calibrated target quantity of change (`rate × #forest` = 10); without it,
+  allocation over-shoots by ~mean patch area.
+- **Aggregation avoidance now implemented.** With `avoid_aggregation = TRUE`
+  evoland rejects patches that would merge, yielding **more, smaller** patches
+  (2.2 patches, area 4.0) — close to the Python `GaussianPatcher` (3.0, 3.3) —
+  versus **fewer, larger** merged blobs without it (1.7, area 6.3). (Aggregation
+  avoidance is rook-based, while the patch-count stat uses 8-connectivity, so
+  diagonally touching patches are still counted as one — hence the modest patch
+  counts.) Avoidance can leave the quantity slightly short of target as the map
+  saturates (8.0 vs 10).
+- Patch-area *distributions* are now a user choice (`area_dist`): `normal`
+  matches `GaussianPatcher`; `lognormal` is right-skewed. Elongation is measured
+  the same way for all tools.

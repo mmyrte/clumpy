@@ -104,7 +104,10 @@ n_cells <- nr * nc
 initial_state <- as.integer(params$initial_state) # 1 (forest)
 final_state <- as.integer(params$final_state) # 2 (urban)
 area_mean <- as.numeric(params$patcher_area_mean) # 3
-area_var <- as.numeric(params$patcher_area_cov) # 1 (Python area "cov")
+# Python's GaussianPatcher uses area_cov as the *standard deviation* of a normal
+# draw; evoland parameterises by variance, so area_var = area_cov^2.
+area_cov <- as.numeric(params$patcher_area_cov) # SD in Python (1)
+area_var <- area_cov^2
 elongation <- as.numeric(params$patcher_eccentricity) # 0.5
 target_rate <- pv_global[2] # P(urban | forest)
 
@@ -143,21 +146,46 @@ patch_stats <- function(post_vec) {
 }
 n_changed <- function(post_vec) sum(post_vec == final_state & ant == initial_state)
 
-run_evo <- function(method_code, rarefy, batch = 1L, seed = 1L) {
+# area_dist code: 0 = log-normal, 1 = normal (Gaussian; matches GaussianPatcher).
+AD_LOGNORM <- 0L
+AD_NORMAL <- 1L
+
+run_evo <- function(method_code, rarefy, avoid_agg, area_dist_code,
+                    am = area_mean, av = area_var, batch = 1L, seed = 1L) {
   set.seed(seed)
   allocate_clumpy_cpp(
-    landscape = ant, ant_landscape = ant, nrow = nr, ncol = nc,
-    from_classes = initial_state, trans_from = initial_state, trans_to = final_state,
-    probs = probs, area_mean = area_mean, area_var = area_var,
+    landscape = ant, nrow = nr, ncol = nc,
+    trans_from = initial_state, trans_to = final_state,
+    probs = probs, area_mean = am, area_var = av,
     elongation = elongation, target_rate = target_rate,
-    method = method_code, batch_size = batch, rarefy = rarefy, shuffle = TRUE
+    method = method_code, batch_size = batch, rarefy = rarefy, shuffle = TRUE,
+    avoid_aggregation = avoid_agg, area_dist = area_dist_code
   )
 }
 
-# Monte-Carlo mean changed-pixel count over nrep seeds.
-mc_changed <- function(method_code, rarefy, batch = 1L) {
-  vals <- vapply(seq_len(opts$nrep), function(s) n_changed(run_evo(method_code, rarefy, batch, s)), numeric(1))
-  c(mean = mean(vals), sd = sd(vals))
+# Monte-Carlo mean of changed-pixel count and patch structure over nrep seeds.
+# (Averaging the patch metrics avoids single-seed noise; note patch counts use
+# 8-connectivity while aggregation avoidance uses rook (4-conn), so diagonally
+# touching patches are counted as one.)
+mc_metrics <- function(method_code, rarefy, avoid_agg, area_dist_code,
+                       am = area_mean, av = area_var) {
+  changed <- numeric(opts$nrep)
+  np <- numeric(opts$nrep)
+  ar <- numeric(opts$nrep)
+  el <- numeric(opts$nrep)
+  for (s in seq_len(opts$nrep)) {
+    post <- run_evo(method_code, rarefy, avoid_agg, area_dist_code, am, av, seed = s)
+    changed[s] <- n_changed(post)
+    ps <- patch_stats(post)
+    np[s] <- ps$n_patch
+    ar[s] <- ps$area_mean
+    el[s] <- ps$elong
+  }
+  c(
+    changed_mean = mean(changed), changed_sd = sd(changed),
+    n_patch = mean(np), patch_area_mean = mean(ar, na.rm = TRUE),
+    patch_elong = mean(el, na.rm = TRUE)
+  )
 }
 
 # ---- 1. GART (pivot mechanism) equivalence ---------------------------------
@@ -185,27 +213,31 @@ cat("--- 2. Quantity of change + 3. patch structure ---\n")
 py_changed <- sum(luc_alloc_py == final_state & luc_initial == initial_state)
 ps_py <- patch_stats(to_rowmajor(luc_alloc_py))
 
+# The Python reference is GaussianPatcher (normal area + avoid_aggregation), so
+# "evoland uPAM normal +agg" is its direct analogue.  The other rows isolate the
+# effect of aggregation avoidance, the area distribution, and the mono-pixel
+# uSAM special case.
 configs <- list(
-  list(label = "evoland uSAM (rarefy=F)", m = 0L, r = FALSE, b = 1L),
-  list(label = "evoland uSAM (rarefy=T)", m = 0L, r = TRUE, b = 1L),
-  list(label = "evoland uPAM (rarefy=T)", m = 1L, r = TRUE, b = 1L)
+  list(label = "evoland uSAM (mono-pixel)", m = 0L, r = TRUE, agg = FALSE, ad = AD_NORMAL, am = 1, av = 0),
+  list(label = "evoland uPAM normal +agg", m = 1L, r = TRUE, agg = TRUE, ad = AD_NORMAL, am = area_mean, av = area_var),
+  list(label = "evoland uPAM normal -agg", m = 1L, r = TRUE, agg = FALSE, ad = AD_NORMAL, am = area_mean, av = area_var),
+  list(label = "evoland uPAM lognorm +agg", m = 1L, r = TRUE, agg = TRUE, ad = AD_LOGNORM, am = area_mean, av = area_var)
 )
 
 rows <- list(data.frame(
-  method = "python clumpy (script)",
+  method = "python clumpy (Gaussian +agg)",
   changed_mean = py_changed, changed_sd = NA_real_,
   n_patch = ps_py$n_patch, patch_area_mean = ps_py$area_mean,
   patch_elong = ps_py$elong, stringsAsFactors = FALSE
 ))
 
 for (cfg in configs) {
-  mc <- mc_changed(cfg$m, cfg$r, cfg$b)
-  ps <- patch_stats(run_evo(cfg$m, cfg$r, cfg$b, opts$seed)) # representative seed
+  mc <- mc_metrics(cfg$m, cfg$r, cfg$agg, cfg$ad, cfg$am, cfg$av)
   rows[[length(rows) + 1L]] <- data.frame(
     method = cfg$label,
-    changed_mean = mc["mean"], changed_sd = mc["sd"],
-    n_patch = ps$n_patch, patch_area_mean = ps$area_mean,
-    patch_elong = ps$elong, stringsAsFactors = FALSE
+    changed_mean = mc["changed_mean"], changed_sd = mc["changed_sd"],
+    n_patch = mc["n_patch"], patch_area_mean = mc["patch_area_mean"],
+    patch_elong = mc["patch_elong"], stringsAsFactors = FALSE
   )
 }
 res <- do.call(rbind, rows)
@@ -223,22 +255,26 @@ cat(sprintf("\nResults written to %s/results.csv\n", outdir))
 # ---- Interpretation --------------------------------------------------------
 target_q <- target_rate * sum(forest)
 get_changed <- function(label) res$changed_mean[res$method == label]
+get_np <- function(label) res$n_patch[res$method == label]
 cat("\n--- interpretation ---\n")
 cat(sprintf(
   "* Pivot mechanism: evoland gart_cpp mean (%.2f) matches the analytic\n  expectation (%.2f) and the Python GART draw (%d) -> equivalent (RNG noise).\n",
   mean(mc_pivots), expected_pivots, py_pivots
 ))
 cat(sprintf(
-  "* Quantity: target = rate*#forest = %.1f. uSAM(rarefy=T)=%.1f and\n  uPAM=%.1f track it (uPAM via an explicit quota, uSAM in expectation);\n  without rarefaction uSAM=%.1f over-allocates by ~mean patch area.\n",
-  target_q, get_changed("evoland uSAM (rarefy=T)"),
-  get_changed("evoland uPAM (rarefy=T)"), get_changed("evoland uSAM (rarefy=F)")
+  "* Direct analogue: 'uPAM normal +agg' uses the same area distribution and\n  aggregation avoidance as the Python GaussianPatcher. changed: python=%.1f vs\n  evoland=%.1f; n_patch: python=%d vs evoland=%.1f (mean).\n",
+  py_changed, get_changed("evoland uPAM normal +agg"),
+  ps_py$n_patch, get_np("evoland uPAM normal +agg")
 ))
-cat("* Patch structure: the Python GaussianPatcher uses avoid_aggregation=TRUE\n")
-cat("  (patches that would merge are rejected), so it yields several small\n")
-cat("  patches. evoland's grower has NO merge avoidance, so neighbouring patches\n")
-cat("  coalesce into fewer, larger blobs (see n_patch / patch_area_mean). This is\n")
-cat("  the 'no merge-failure rollback' gap noted in the verification doc and is\n")
-cat("  the main remaining behavioural difference to weigh (Dinamica expander vs\n")
-cat("  patcher semantics).\n")
-cat("* Patch areas also differ by construction (Python: Gaussian draw; evoland:\n")
-cat("  log-normal), but elongation is measured identically for both tools.\n")
+cat(sprintf(
+  "* Aggregation avoidance: +agg=%.1f changed in %.1f patches vs -agg=%.1f in\n  %.1f patches (means); with avoidance ON, merging patches are rejected (more,\n  smaller patches; quantity may fall short of the target as the map saturates).\n",
+  get_changed("evoland uPAM normal +agg"), get_np("evoland uPAM normal +agg"),
+  get_changed("evoland uPAM normal -agg"), get_np("evoland uPAM normal -agg")
+))
+cat(sprintf(
+  "* Quantity vs target (rate*#forest = %.1f): the 1/E(sigma) rarefaction keeps\n  the uPAM quota near target; aggregation avoidance can leave it short.\n",
+  target_q
+))
+cat("* Area distribution: 'normal' matches GaussianPatcher; 'lognorm' is\n")
+cat("  right-skewed. Compare the two +agg rows for the effect; elongation is\n")
+cat("  measured identically for all tools.\n")
