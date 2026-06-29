@@ -27,6 +27,25 @@ drives the actual evoland backend.
    - **Patch structure** — count / mean area / elongation of the newly created
      patches, measured identically for both via `calculate_class_stats_cpp`.
 
+## Exact (pixel-perfect) checks
+
+`compare_evoland.*` is a *statistical* comparison (different RNGs ⇒ no
+cell-by-cell match). For a deterministic, RNG-controlled equivalence:
+
+- **Pivot test (MuST / GART) — done.** `compare_must_exact.{py,R,sh}` exports
+  clumpy's GART inputs and the exact uniforms it draws, then replays them through
+  evoland's `must_cpp` (`u=` argument) and asserts identical per-cell assignment:
+
+  ```sh
+  bash scripts/comparison/compare_must_exact.sh --evoland ../evoland-plus
+  # -> "PERFECT MATCH: evoland must_cpp == clumpy GART on identical (P, x)."
+  ```
+
+- **Patch growth — planned.** See [`PIXEL_PERFECT_PLAN.md`](PIXEL_PERFECT_PLAN.md):
+  evoland's grower is a re-implementation (no hollow-fill, different tie-breaks),
+  so a cell-by-cell patch comparison needs a restricted-scenario battery; the
+  plan lays out the design and the differences to control for.
+
 ## Running
 
 ```sh
