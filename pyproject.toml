@@ -4,23 +4,15 @@ version = "0.1.0"
 description = "Workspace for clumpy LUCC modeling packages"
 requires-python = ">=3.10"
 dependencies = [
-    "numpy>=1.19.2,<2.0",
-    "matplotlib",
-    "scipy",
-    "tqdm",
-    "scikit-learn",
-    "scikit-image",
-    "pandas",
-    "rasterio",
-    "cython",
+    # the three packages of this repository; they bring their own dependencies
+    "clumpy",
     "ekde",
     "hyperclip",
-    "clumpy",
-]
-
-[dependency-groups]
-dev = [
-    "basedpyright",
+    # the Cython extensions of ekde and hyperclip need the NumPy 1.x C API
+    "numpy>=1.19.2,<2.0",
+    # imported by the scripts directly
+    "scipy",
+    "scikit-learn",
 ]
 
 [tool.uv.sources]
