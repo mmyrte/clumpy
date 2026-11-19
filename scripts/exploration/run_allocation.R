@@ -12,7 +12,7 @@
 # C++ allocation module, runs the R allocation using identical inputs, and
 # compares results cell-by-cell.
 #
-# Usage (from repo root, after rv activate):
+# Usage (from repo root):
 #   Rscript scripts/exploration/run_allocation.R [--pydir scripts/output/csv] [--verbose 2]
 #
 # The script:

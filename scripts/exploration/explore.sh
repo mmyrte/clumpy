@@ -12,12 +12,11 @@
 #
 # Prerequisites:
 #   - uv-managed Python environment with clumpy/ekde/hyperclip installed
-#   - rv-activated R environment with Rcpp installed
-#   - Both environments set up per PROGRESS.md steps 1 & 4
+#   - R with Rcpp and a C++ toolchain
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 # ---- Defaults --------------------------------------------------------------
@@ -82,13 +81,7 @@ fi
 # ---- Step 2: Run R allocation -----------------------------------------------
 banner "Step 2: R allocation (Rcpp)"
 
-# Ensure rv scripts are generated so .Rprofile can source them
-rv activate 2>/dev/null || true
-
-# Run R with --no-save --no-restore (not --vanilla, which skips .Rprofile).
-# We let .Rprofile run normally to set up the rv library path, then
-# source the driver script.  Arguments after --args are passed to
-# commandArgs(trailingOnly=TRUE) inside the R session.
+# Arguments after the -e expression are passed to commandArgs(trailingOnly=TRUE).
 Rscript --no-save --no-restore \
     -e "source('scripts/exploration/run_allocation.R')" \
     --pydir "$PYDIR" --verbose "$VERBOSE" 2>&1

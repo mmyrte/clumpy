@@ -1,5 +1,9 @@
 # Verification: CLUMPY pivot mechanism in evoland-plus
 
+*Historical record of a code reading of 2026-06-26, kept for provenance.
+It describes evoland.plus (then evoland-plus) as it was on that day; the R function `gart()` it examines has since been replaced by the C++ `must_cpp()`, and the gaps it lists have been closed or are documented in `?alloc_clumpy_spec`.
+The current comparison is described in the [README](../README.md).*
+
 Investigation date: 2026-06-26
 Scope: verify the **pivot-cell selection mechanism** of the evoland-plus CLUMPY
 allocator against Mazy's thesis (`mazy-thesis.pdf`) and the reference Python

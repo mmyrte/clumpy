@@ -11,7 +11,6 @@ Exercises the core clumpy allocation pipeline with synthetic data:
   6. Saves all inputs and outputs as .npz for later comparison with R.
 
 Usage:
-    cd /Users/jhartman/github-repos/clumpy
     MPLBACKEND=Agg uv run python scripts/run_allocation.py [--seed 42] [--outdir scripts/output]
 """
 
@@ -494,6 +493,12 @@ def main():
         f.write(f"initial_state=1\n")
         f.write(f"final_state=2\n")
         f.write(f"final_states_for_tpe=1,2\n")
+
+    # Patch log as CSV, read by scripts/exploration/run_allocation.R
+    with open(csv_dir / "patch_log.csv", "w") as f:
+        f.write("pivot_j,final_state,n_allocated\n")
+        for j, v, s, _ in patch_log:
+            f.write(f"{j},{v},{s}\n")
 
     # Save per-pivot random draws for deterministic R replay
     np.savetxt(
