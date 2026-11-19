@@ -12,7 +12,7 @@
 #
 # Prerequisites:
 #   - uv-managed Python environment with clumpy/ekde/hyperclip installed
-#   - R with Rcpp and a C++ toolchain
+#   - rv-managed R environment with Rcpp (rv sync) and a C++ toolchain
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -80,6 +80,9 @@ fi
 
 # ---- Step 2: Run R allocation -----------------------------------------------
 banner "Step 2: R allocation (Rcpp)"
+
+# Ensure rv scripts are generated so .Rprofile can source them
+rv activate 2>/dev/null || true
 
 # Arguments after the -e expression are passed to commandArgs(trailingOnly=TRUE).
 Rscript --no-save --no-restore \
