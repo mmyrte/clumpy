@@ -13,7 +13,7 @@ It is not a maintained version of CLUMPY and adds no methods to it.
 | `clumpy/` | CLUMPY: calibration, transition probability estimation, allocation | GPL-3.0 (`clumpy/LICENSE`; the classifier in `clumpy/setup.py` says MIT) |
 | `ekde/` | Efficient kernel density estimation (Cython), used by CLUMPY | BSD-3-Clause (`ekde/LICENSE.txt`) |
 | `hyperclip/` | Volume of hypercubes clipped by hyperplanes (Cython), used by `ekde` | GPL-3.0 (`hyperclip/LICENSE.txt`) |
-| `scripts/` | Comparison scripts added by this fork, see below | |
+| `scripts/` | Comparison scripts added by this fork, see below | GPL-3.0 (`scripts/LICENSE`) |
 | `docs/` | Notes of the fork: the [engineering log](docs/engineering-log.md) and an early [code reading of the pivot test](docs/pivot-mechanism-verification.md) | |
 | `mazy-thesis.pdf`, `mazy-thesis.txt` | The thesis the methods are specified in, and its plain text | |
 
@@ -21,7 +21,7 @@ The three packages are separate repositories upstream ([clumpy](https://gitlab.i
 
 ## Changes to the upstream code
 
-The first commit of this repository (`d47b21d`) holds the upstream sources as imported; the upstream revisions are not recorded in the history.
+The first commit of this repository (`d47b21d`, 2026-03-09) is a clone of the latest upstream version of each of the three packages at that date.
 All later changes to the package code were made in two commits, and are listed file by file in the [engineering log](docs/engineering-log.md):
 
 - **Build fixes**, so that the packages install on Python 3.10 and later with NumPy 1.26:
@@ -31,7 +31,7 @@ All later changes to the package code were made in two commits, and are listed f
 - **Dead code removed** (commit `79552cb`): three modules that imported modules that do not exist, a backup copy of a Cython source, unused imports and commented-out code.
   The files touched were also reformatted, so the diff of this commit is larger than the change.
 
-According to that log, no algorithm was changed; this has not been checked again against the upstream repositories.
+No algorithm was changed.
 The package code has not changed since commit `e9f73b9`, the revision [evoland-experiments](https://github.com/mmyrte/evoland-experiments) pins.
 
 Known defects of the upstream code, left as they are:
@@ -43,11 +43,18 @@ Known defects of the upstream code, left as they are:
 ## Comparisons
 
 All scripts run from the repository root.
-They need uv, R with the Rcpp package and a C++ compiler; the comparisons with evoland.plus also need a source checkout of it, by default in `../evoland.plus`.
+They need [uv](https://docs.astral.sh/uv/) for Python, [rv](https://a2-ai.github.io/rv-docs/) for R and a C++ compiler; the comparisons with evoland.plus also need a source checkout of it, by default in `../evoland.plus`.
+Both environments are pinned by lockfiles (`uv.lock`, `rv.lock`):
 
 ```sh
 uv sync
 ```
+
+```sh
+rv sync
+```
+
+`.Rprofile` activates the rv library, so `Rscript` fails in this directory until `rv sync` has run.
 
 | Script | What it compares | Result |
 | --- | --- | --- |
