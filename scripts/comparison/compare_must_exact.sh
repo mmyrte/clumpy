@@ -3,11 +3,11 @@
 # export clumpy's GART inputs+output, replay them through evoland's must_cpp.
 #
 # Usage (clumpy repo root):
-#   bash scripts/comparison/compare_must_exact.sh [--evoland ../evoland-plus]
+#   bash scripts/comparison/compare_must_exact.sh [--evoland ../evoland.plus]
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
-EVOLAND="../evoland-plus"
+EVOLAND="../evoland.plus"
 [[ "${1:-}" == "--evoland" ]] && EVOLAND="$2"
 
 echo "=== Step 1: export clumpy GART (P, x, V) ==="

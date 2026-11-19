@@ -2,7 +2,7 @@
 
 This directory compares the **Python clumpy reference allocation** against the
 **evoland `uSAM` / `uPAM` allocators** (the C++ backend `allocate_clumpy_cpp`
-from the `evoland-plus` repository).
+from the `evoland.plus` repository).
 
 It is distinct from [`../exploration/`](../exploration/), which was the original
 *exploration*: a standalone Rcpp re-implementation of clumpy's patch grower,
@@ -17,9 +17,9 @@ drives the actual evoland backend.
    `GaussianPatcher` allocation. It writes everything to
    `../output/csv/` (the shared interface).
 2. `compare_evoland.R` compiles the evoland backend straight from the
-   `evoland-plus` sources, feeds it the **same** probability field and patch
+   `evoland.plus` sources, feeds it the **same** probability field and patch
    parameters, and compares:
-   - **GART (pivot mechanism)** — `gart_cpp` vs Python GART vs the analytic
+   - **GART (pivot mechanism)** — `must_cpp` vs Python GART vs the analytic
      expectation `E[#pivots] = Σ P(v|u,z)`.
    - **Quantity of change** — Python vs evoland `uSAM` (rarefy on/off) and
      `uPAM`, averaged over `--nrep` seeds (different RNGs ⇒ no cell-by-cell
@@ -37,35 +37,36 @@ cell-by-cell match). For a deterministic, RNG-controlled equivalence:
   evoland's `must_cpp` (`u=` argument) and asserts identical per-cell assignment:
 
   ```sh
-  bash scripts/comparison/compare_must_exact.sh --evoland ../evoland-plus
+  bash scripts/comparison/compare_must_exact.sh --evoland ../evoland.plus
   # -> "PERFECT MATCH: evoland must_cpp == clumpy GART on identical (P, x)."
   ```
 
-- **Patch growth — planned.** See [`PIXEL_PERFECT_PLAN.md`](PIXEL_PERFECT_PLAN.md):
-  evoland's grower is a re-implementation (no hollow-fill, different tie-breaks),
-  so a cell-by-cell patch comparison needs a restricted-scenario battery; the
-  plan lays out the design and the differences to control for.
+- **Patch growth and uSAM end to end.** These comparisons are part of
+  evoland-experiments (`2026-09-paper-figures/010-verify-clumpy.r`): clumpy's
+  random numbers replayed into evoland's uSAM allocator, and the patch grower
+  compared scenario by scenario. evoland's grower is a re-implementation, not a
+  port; its intended differences are listed in `?alloc_clumpy_spec`.
 
 ## Running
 
 ```sh
 # from the clumpy repo root
 uv sync                                   # build the Python env once
-bash scripts/comparison/compare_evoland.sh --seed 42 --nrep 200 --evoland ../evoland-plus
+bash scripts/comparison/compare_evoland.sh --seed 42 --nrep 200 --evoland ../evoland.plus
 ```
 
 `compare_evoland.R` can be run on its own once the Python CSVs exist:
 
 ```sh
-Rscript scripts/comparison/compare_evoland.R --evoland ../evoland-plus --nrep 200
+Rscript scripts/comparison/compare_evoland.R --evoland ../evoland.plus --nrep 200
 ```
 
 Requirements: a `uv`-managed Python env (`uv sync`), R with `Rcpp` and a C++
-toolchain (binary packages from <https://p3m.dev>), and an `evoland-plus`
-checkout (default `../evoland-plus`). Results are printed and written to
+toolchain, and an `evoland.plus`
+checkout (default `../evoland.plus`). Results are printed and written to
 `../output/comparison/results.csv`.
 
-## Headline findings (300 reps, seed 42)
+## Headline findings (300 reps, seed 42; evoland.plus at `b06e3d1`)
 
 The direct analogue of the Python reference is **`evoland uPAM normal +agg`**:
 same area distribution (normal/Gaussian) and aggregation avoidance as clumpy's
@@ -78,7 +79,7 @@ same area distribution (normal/Gaussian) and aggregation avoidance as clumpy's
 | evoland uPAM normal −agg | 9.5 | 1.7 | 6.3 |
 | evoland uSAM (mono-pixel) | 9.8 | 3.4 | 3.3 |
 
-- **Pivot mechanism is equivalent.** evoland `gart_cpp` reproduces the analytic
+- **Pivot mechanism is equivalent.** evoland `must_cpp` reproduces the analytic
   pivot expectation and the Python GART draw (differences are pure RNG noise).
 - **Rarefaction matters.** With the `1/E(σ)` rarefaction the uPAM quota tracks
   the calibrated target quantity of change (`rate × #forest` = 10); without it,

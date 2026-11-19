@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: >-
+  This repository is a fork of CLUMPY that makes it run on a current Python
+  toolchain; it serves as the reference implementation that the allocators of
+  evoland.plus are compared against. Cite the methods by the references below,
+  and name the commit of this repository when referring to the code that was run.
+title: "clumpy: reference implementation for the allocators of evoland.plus (fork of CLUMPY)"
+type: software
+authors:
+  - family-names: Mazy
+    given-names: François-Rémi
+  - family-names: Longaretti
+    given-names: Pierre-Yves
+repository-code: "https://github.com/mmyrte/clumpy"
+url: "https://gitlab.inria.fr/fmazy/clumpy"
+preferred-citation:
+  type: conference-paper
+  title: "A Formally Correct and Algorithmically Efficient LULC Change Model-building Environment"
+  authors:
+    - family-names: Mazy
+      given-names: François-Rémi
+    - family-names: Longaretti
+      given-names: Pierre-Yves
+  collection-title: "Proceedings of the 8th International Conference on Geographical Information Systems Theory, Applications and Management (GISTAM)"
+  year: 2022
+  start: 25
+  end: 36
+  doi: 10.5220/0011000000003185
+references:
+  - type: thesis
+    title: "Towards a coherent algorithmic theory and implementation of pattern-based land use and land cover change modeling"
+    authors:
+      - family-names: Mazy
+        given-names: François-Rémi
+    institution:
+      name: "Université Grenoble Alpes"
+    year: 2022
+    url: "https://theses.hal.science/tel-04382012v1"

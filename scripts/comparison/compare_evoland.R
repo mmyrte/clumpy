@@ -5,7 +5,7 @@
 # This is the *comparison* (cf. the earlier scripts/exploration/, which only
 # verified a standalone Rcpp re-implementation of the patch grower).  Here we
 # drive the actual evoland allocation backend (allocate_clumpy_cpp, compiled
-# straight from the evoland-plus sources) on the same synthetic inputs the
+# straight from the evoland.plus sources) on the same synthetic inputs the
 # Python reference pipeline produced, and compare:
 #
 #   1. MuST (pivot mechanism) - evoland must_cpp vs the Python GART vs the
@@ -28,7 +28,7 @@
 #
 # Usage (from the clumpy repo root):
 #   Rscript scripts/comparison/compare_evoland.R \
-#       [--pydir scripts/output/csv] [--evoland ../evoland-plus] \
+#       [--pydir scripts/output/csv] [--evoland ../evoland.plus] \
 #       [--nrep 200] [--seed 42]
 #
 # Prerequisites:
@@ -49,7 +49,7 @@ parse_args <- function() {
   a <- commandArgs(trailingOnly = TRUE)
   o <- list(
     pydir = "scripts/output/csv",
-    evoland = "../evoland-plus",
+    evoland = "../evoland.plus",
     nrep = 200L,
     seed = 42L
   )
@@ -74,7 +74,7 @@ stats_src <- file.path(opts$evoland, "src", "patch_stats.cpp")
 if (!file.exists(evo_src)) {
   stop(
     "Could not find evoland sources at '", evo_src, "'.\n",
-    "Pass --evoland <path-to-evoland-plus-checkout>."
+    "Pass --evoland <path-to-evoland.plus-checkout>."
   )
 }
 cat("=== Python-vs-evoland allocation comparison ===\n")

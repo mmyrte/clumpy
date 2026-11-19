@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # COMPARISON wrapper: run the Python clumpy reference, then compare it against
-# the evoland uSAM / uPAM allocators (compiled from the evoland-plus sources).
+# the evoland uSAM / uPAM allocators (compiled from the evoland.plus sources).
 #
 # Usage (from the clumpy repo root):
 #   bash scripts/comparison/compare_evoland.sh \
-#       [--seed 42] [--nrep 200] [--evoland ../evoland-plus]
+#       [--seed 42] [--nrep 200] [--evoland ../evoland.plus]
 #
 # Prerequisites:
 #   - uv-managed Python env with clumpy/ekde/hyperclip (uv sync)
-#   - R with Rcpp + a C++ toolchain (binaries: https://p3m.dev)
-#   - an evoland-plus checkout (default sibling dir ../evoland-plus)
+#   - R with Rcpp + a C++ toolchain
+#   - an evoland.plus checkout (default sibling dir ../evoland.plus)
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -19,7 +19,7 @@ cd "$REPO_ROOT"
 
 SEED=42
 NREP=200
-EVOLAND="../evoland-plus"
+EVOLAND="../evoland.plus"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --seed) SEED="$2"; shift 2 ;;

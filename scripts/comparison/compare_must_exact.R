@@ -8,13 +8,13 @@
 # that the MuST / GART pivot test is re-implemented faithfully.
 #
 # Usage (clumpy repo root, after running compare_must_exact.py):
-#   Rscript scripts/comparison/compare_must_exact.R [--evoland ../evoland-plus]
+#   Rscript scripts/comparison/compare_must_exact.R [--evoland ../evoland.plus]
 # ---------------------------------------------------------------------------
 options(repos = c(P3M = "https://p3m.dev/cran/__linux__/noble/latest"))
 suppressPackageStartupMessages(library(Rcpp))
 
 args <- commandArgs(trailingOnly = TRUE)
-evoland <- "../evoland-plus"
+evoland <- "../evoland.plus"
 if (length(args) >= 2L && args[1] == "--evoland") evoland <- args[2]
 
 evo_src <- file.path(evoland, "src", "alloc_clumpy.cpp")
