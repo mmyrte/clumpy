@@ -2,7 +2,7 @@
 
 *Historical record of the work of March and April 2026, kept for provenance.
 It lists every change made to the upstream package code (Steps 1 to 3).
-File names are those of the time: `scripts/rcpp/allocate.cpp`, `scripts/run_allocation.R` and `scripts/compare.sh` are now `scripts/exploration/allocate.cpp`, `scripts/exploration/run_allocation.R` and `scripts/exploration/explore.sh`.
+File names are those of the time: `scripts/rcpp/allocate.cpp`, `scripts/run_allocation.R` and `scripts/compare.sh` are now `scripts/exploration/allocate.cpp`, `scripts/exploration/run_allocation.R` and `scripts/exploration/explore.sh`, and the R environment is no longer managed with rv.
 Steps 5 and 6 were not pursued here: the allocators were reimplemented in [evoland.plus](https://github.com/ethzplus/evoland.plus) instead, see the [README](../README.md).*
 
 ## Goal
