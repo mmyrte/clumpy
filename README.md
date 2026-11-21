@@ -43,18 +43,12 @@ Known defects of the upstream code, left as they are:
 ## Comparisons
 
 All scripts run from the repository root.
-They need [uv](https://docs.astral.sh/uv/) for Python, [rv](https://a2-ai.github.io/rv-docs/) for R and a C++ compiler; the comparisons with evoland.plus also need a source checkout of it, by default in `../evoland.plus`.
-Both environments are pinned by lockfiles (`uv.lock`, `rv.lock`):
+They need [uv](https://docs.astral.sh/uv/) for Python and Rcpp (and naturally a C++ compiler) for R; the comparisons with evoland.plus also need a source checkout of it, by default in `../evoland.plus`.
+The `uv` environment is pinned by a lockfile (`uv.lock`):
 
 ```sh
 uv sync
 ```
-
-```sh
-rv sync
-```
-
-`.Rprofile` activates the rv library, so `Rscript` fails in this directory until `rv sync` has run.
 
 | Script | What it compares | Result |
 | --- | --- | --- |
