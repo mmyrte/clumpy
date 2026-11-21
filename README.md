@@ -58,11 +58,11 @@ rv sync
 
 | Script | What it compares | Result |
 | --- | --- | --- |
-| `scripts/comparison/compare_must_exact.sh` | The pivot test (MuST, Mazy 2022, App. 3.B; CLUMPY calls it GART): CLUMPY's uniform draws are replayed through `must_cpp()` of evoland.plus | identical in all 2000 rows |
+| `scripts/comparison/compare_must_exact.sh` | The pivot test (MuST, Mazy 2022, App. 3.B; CLUMPY calls it GART): CLUMPY's uniform draws are replayed through `must_cpp()` of evoland.plus, by way of R's user-supplied random number generator (`replay_rng.c`) | identical in all 2000 rows |
 | `scripts/comparison/compare_evoland.sh` | Quantity of change and patch statistics of uSAM and uPAM in evoland.plus against one CLUMPY allocation, over many seeds | statistical, see [`scripts/comparison/README.md`](scripts/comparison/README.md) |
 | `scripts/exploration/explore.sh` | A standalone Rcpp port of CLUMPY's patch grower (`scripts/exploration/allocate.cpp`, not the evoland.plus code) against CLUMPY, replaying its area draws | identical in all 400 cells |
 
-These results were reproduced on 2026-11-19 with evoland.plus at commit `b06e3d1`.
+These results were reproduced on 2026-11-21 with evoland.plus at commit `69da97c` ([pull request 150](https://github.com/ethzplus/evoland.plus/pull/150)).
 
 The comparison of the allocators as evoland.plus runs them is part of [evoland-experiments](https://github.com/mmyrte/evoland-experiments), which installs the packages from this repository: `2026-09-paper-figures/010-verify-clumpy.r` replays CLUMPY's random numbers into the uSAM allocator and compares the patch grower scenario by scenario, and `010-verify-upam-bias.r` measures the effect of the fixed potentials in uPAM.
 Where evoland.plus departs from CLUMPY on purpose, the differences are listed in its documentation, `?alloc_clumpy_spec`.

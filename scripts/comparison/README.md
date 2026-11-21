@@ -34,7 +34,10 @@ cell-by-cell match). For a deterministic, RNG-controlled equivalence:
 
 - **Pivot test (MuST / GART) — done.** `compare_must_exact.{py,R,sh}` exports
   clumpy's GART inputs and the exact uniforms it draws, then replays them through
-  evoland's `must_cpp` (`u=` argument) and asserts identical per-cell assignment:
+  evoland's `must_cpp` and asserts identical per-cell assignment. The uniforms
+  are handed out by R's user-supplied random number generator (`replay_rng.c`),
+  so evoland's code runs unchanged, and the script also checks that evoland draws
+  exactly as many uniforms as clumpy did:
 
   ```sh
   bash scripts/comparison/compare_must_exact.sh --evoland ../evoland.plus
@@ -66,7 +69,7 @@ toolchain, and an `evoland.plus`
 checkout (default `../evoland.plus`). Results are printed and written to
 `../output/comparison/results.csv`.
 
-## Headline findings (300 reps, seed 42; evoland.plus at `b06e3d1`)
+## Headline findings (300 reps, seed 42; evoland.plus at `69da97c`, pull request 150)
 
 The direct analogue of the Python reference is **`evoland uPAM normal +agg`**:
 same area distribution (normal/Gaussian) and aggregation avoidance as clumpy's
@@ -75,8 +78,8 @@ same area distribution (normal/Gaussian) and aggregation avoidance as clumpy's
 | method | changed | n_patch | patch area |
 |---|---|---|---|
 | python clumpy (Gaussian +agg) | 10.0 | 3.0 | 3.3 |
-| evoland uPAM normal +agg | 8.0 | 2.2 | 4.0 |
-| evoland uPAM normal −agg | 9.5 | 1.7 | 6.3 |
+| evoland uPAM normal +agg | 10.0 | 2.7 | 4.2 |
+| evoland uPAM normal −agg | 11.1 | 1.8 | 7.1 |
 | evoland uSAM (mono-pixel) | 9.8 | 3.4 | 3.3 |
 
 - **Pivot mechanism is equivalent.** evoland `must_cpp` reproduces the analytic
@@ -86,12 +89,15 @@ same area distribution (normal/Gaussian) and aggregation avoidance as clumpy's
   allocation over-shoots by ~mean patch area.
 - **Aggregation avoidance now implemented.** With `avoid_aggregation = TRUE`
   evoland rejects patches that would merge, yielding **more, smaller** patches
-  (2.2 patches, area 4.0) — close to the Python `GaussianPatcher` (3.0, 3.3) —
-  versus **fewer, larger** merged blobs without it (1.7, area 6.3). (Aggregation
-  avoidance is rook-based, while the patch-count stat uses 8-connectivity, so
-  diagonally touching patches are still counted as one — hence the modest patch
-  counts.) Avoidance can leave the quantity slightly short of target as the map
-  saturates (8.0 vs 10).
+  (2.7 patches, area 4.2) — close to the Python `GaussianPatcher` (3.0, 3.3) —
+  versus **fewer, larger** merged blobs without it (1.8, area 7.1). (Aggregation
+  avoidance is rook-based, while the patch-count stat here uses 8-connectivity,
+  so diagonally touching patches are still counted as one — hence the modest
+  patch counts.)
+- **Quantity of change is met.** uPAM allocates patches until its quota of 10
+  cells is used up, so it reaches the quota and exceeds it by less than a patch
+  (10.0 with avoidance, 11.1 without). Before evoland.plus pull request 150,
+  uPAM stopped at the first pass that selected no pivot and fell short (8.0).
 - Patch-area *distributions* are now a user choice (`area_dist`): `normal`
   matches `GaussianPatcher`; `lognormal` is right-skewed. Elongation is measured
   the same way for all tools.
