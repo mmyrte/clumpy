@@ -1,6 +1,6 @@
 # clumpy: reference implementation for the allocators of evoland.plus
 
-This repository is a fork of [CLUMPY](https://gitlab.inria.fr/fmazy/clumpy), the land use and cover change model by François-Rémi Mazy and Pierre-Yves Longaretti (Université Grenoble Alpes, CNRS, Inria, LJK).
+This repository is a fork of [CLUMPY](https://gitlab.inria.fr/fmazy/clumpy), the land use and cover change model by François-Rémi Zawadzki (formerly Mazy), and Pierre-Yves Longaretti (Université Grenoble Alpes, CNRS, Inria, LJK).
 CLUMPY is the reference implementation of the unbiased allocation methods uSAM and uPAM of [Mazy (2022)](https://theses.hal.science/tel-04382012v1), Ch. 3.
 
 The fork exists for one purpose: to run CLUMPY on a current Python toolchain, so that the C++ reimplementation of these allocators in [evoland.plus](https://github.com/ethzplus/evoland.plus) can be compared against it.
